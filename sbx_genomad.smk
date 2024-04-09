@@ -66,4 +66,16 @@ rule genomad_end_to_end:
         genomad end-to-end --cleanup --splits 8 {input.contigs} {output} {input.db} 2>&1 | tee {log}
         """
 
+
 rule genomad_filter_for_prophage:
+    """Filter Genomad results for prophage sequences"""
+    input:
+        genomad_results=VIRUS_FP / "genomad" / "{sample}" / "genomad_results.csv",
+    output:
+        VIRUS_FP / "genomad" / "{sample}" / "prophage_genomad_results.csv",
+    log:
+        LOG_FP / "genomad_filter_for_prophage_{sample}.log",
+    benchmark:
+        BENCHMARK_FP / "genomad_filter_for_prophage_{sample}.tsv"
+    script:
+        "scripts/genomad_filter_for_prophage.py"
