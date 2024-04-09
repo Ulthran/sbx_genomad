@@ -1,4 +1,4 @@
-def get_template_path() -> Path:
+def get_genomad_path() -> Path:
     for fp in sys.path:
         if fp.split("/")[-1] == "sbx_genomad":
             return Path(fp)
@@ -7,7 +7,9 @@ def get_template_path() -> Path:
     )
 
 
-SBX_TEMPLATE_VERSION = open(get_template_path() / "VERSION").read().strip()
+SBX_GENOMAD_VERSION = open(get_genomad_path() / "VERSION").read().strip()
+
+VIRUS_FP = Cfg["all"]["output_fp"] / "virus"
 
 try:
     BENCHMARK_FP
@@ -20,47 +22,48 @@ except NameError:
 
 
 localrules:
-    all_template,
+    all_genomad,
 
 
-rule all_template:
+rule all_genomad:
     input:
-        QC_FP / "mush" / "big_file.txt",
+        expand(VIRUS_FP / "genomad" / "{sample}", sample=Samples),
 
 
-rule example_rule:
-    """Takes in cleaned .fastq.gz and mushes them all together into a file"""
-    input:
-        expand(QC_FP / "cleaned" / "{sample}_{rp}.fastq.gz", sample=Samples, rp=Pairs),
+rule genomad_download_db:
+    """Download Genomad database"""
     output:
-        QC_FP / "mush" / "big_file1.txt",
+        dir(Cfg["sbx_genomad"]["genomad_db"]),
     log:
         LOG_FP / "example_rule.log",
     benchmark:
         BENCHMARK_FP / "example_rule.tsv"
-    params:
-        opts=Cfg["sbx_genomad"]["example_rule_options"],
     conda:
         "envs/sbx_genomad_env.yml"
     container:
-        f"docker://sunbeamlabs/sbx_genomad:{SBX_TEMPLATE_VERSION}"
+        f"docker://antoniopcamargo/genomad"
     shell:
-        "cat {params.opts} {input} >> {output} 2> {log}"
+        "genomad download-database {output} 2>&1 | tee {log}"
 
 
-rule example_with_script:
-    """Take in big_file1 and then ignore it and write the results of `samtools --help` to the output using a python script"""
+rule genomad_end_to_end:
+    """Run Genomad end-to-end pipeline"""
     input:
-        QC_FP / "mush" / "big_file1.txt",
+        contigs=ASSEMBLY_FP / "megahit" / "{sample}_asm" / "final.contigs.fa",
+        db=Cfg["sbx_genomad"]["genomad_db"],
     output:
-        QC_FP / "mush" / "big_file.txt",
+        VIRUS_FP / "genomad" / "{sample}",
     log:
-        LOG_FP / "example_with_script.log",
+        LOG_FP / "genomad_end_to_end_{sample}.log",
     benchmark:
-        BENCHMARK_FP / "example_with_script.tsv"
+        BENCHMARK_FP / "genomad_end_to_end_{sample}.tsv"
     conda:
         "envs/sbx_genomad_env.yml"
     container:
-        f"docker://sunbeamlabs/sbx_genomad:{SBX_TEMPLATE_VERSION}"
-    script:
-        "scripts/example_with_script.py"
+        f"docker://antoniopcamargo/genomad"
+    shell:
+        """
+        genomad end-to-end --cleanup --splits 8 {input.contigs} {output} {input.db} 2>&1 | tee {log}
+        """
+
+rule genomad_filter_for_prophage:

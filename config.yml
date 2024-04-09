@@ -1,2 +1,2 @@
 sbx_genomad:
-  example_rule_options: 'DUMMY STRING'
+  genomad_db: ''
