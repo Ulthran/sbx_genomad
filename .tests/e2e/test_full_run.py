@@ -1,24 +1,42 @@
+import gzip
+import os
 import pytest
 import shutil
 import subprocess as sp
 import sys
-import tempfile
 from pathlib import Path
 
 
 @pytest.fixture
-def setup():
-    temp_dir = Path(tempfile.mkdtemp())
+def setup(tmpdir):
+    reads_fp = tmpdir / "reads/"
+    assemblies_fp = Path(".tests/data/set5_gut_virome_dataset/assemblies/").resolve()
+    genomad_db_fp = tmpdir / "genomad_db/"
 
-    reads_fp = Path(".tests/data/reads/").resolve()
+    for dir in [x[0] for x in os.walk(assemblies_fp)][1:]:
+        with gzip.open(reads_fp / f"{dir.name}_1.fastq.gz", "w") as r1, gzip.open(
+            reads_fp / f"{dir.name}_2.fastq.gz", "w"
+        ) as r2:
+            r1.write("NONEMPTY")
+            r2.write("NONEMPTY")
 
-    project_dir = temp_dir / "project/"
+    project_dir = tmpdir / "project/"
 
     sp.check_output(["sunbeam", "init", "--data_fp", reads_fp, project_dir])
 
     config_fp = project_dir / "sunbeam_config.yml"
+    output_fp = project_dir / "sunbeam_output"
+    megahit_assemblies_fp = output_fp / "assembly" / "megahit"
 
-    config_str = f"sbx_genomad: {{example_rule_options: '--number'}}"
+    os.makedirs(megahit_assemblies_fp, exist_ok=True)
+
+    for dir in [x[0] for x in os.walk(assemblies_fp)][1:]:
+        shutil.copyfile(
+            Path(dir) / "assembly.fa",
+            megahit_assemblies_fp / f"{dir.name}_asm" / "final.contigs.fa",
+        )
+
+    config_str = f"sbx_genomad: {{genomad_db: {genomad_db_fp}}}"
 
     sp.check_output(
         [
@@ -32,9 +50,7 @@ def setup():
         ]
     )
 
-    yield temp_dir, project_dir
-
-    shutil.rmtree(temp_dir)
+    yield tmpdir, project_dir
 
 
 @pytest.fixture
@@ -52,7 +68,7 @@ def run_sunbeam(setup):
                 "run",
                 "--profile",
                 project_dir,
-                "all_template",
+                "all_genomad",
                 "--directory",
                 temp_dir,
             ]
@@ -74,7 +90,8 @@ def run_sunbeam(setup):
 def test_full_run(run_sunbeam):
     output_fp, benchmarks_fp = run_sunbeam
 
-    big_file_fp = output_fp / "qc/mush/big_file.txt"
-
-    # Check output
-    assert big_file_fp.exists(), f"{big_file_fp} does not exist"
+    for dir in [x[0] for x in os.walk(output_fp / "virus" / "genomad")][1:]:
+        summary = (
+            Path(dir) / "final.contigs_summary" / "final.contigs_virus_summary.tsv"
+        )
+        assert summary.exists(), f"{summary} does not exist"
