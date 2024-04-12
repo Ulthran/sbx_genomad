@@ -50,7 +50,10 @@ rule genomad_download_db:
     container:
         f"docker://sunbeamlabs/sbx_genomad:{SBX_GENOMAD_VERSION}"
     shell:
-        "genomad download-database {output} 2>&1 | tee {log}"
+        """
+        GENOMAD_DB_DIR=$(dirname {output.version})
+        genomad download-database $(dirname "$GENOMAD_DB_DIR") 2>&1 | tee {log}
+        """
 
 
 rule genomad_end_to_end:
