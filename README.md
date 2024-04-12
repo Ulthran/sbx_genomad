@@ -9,7 +9,7 @@
 
 ## Introduction
 
-sbx_genomad is a [sunbeam](https://github.com/sunbeam-labs/sunbeam) extension for .... This pipeline uses ....
+sbx_genomad is a [sunbeam](https://github.com/sunbeam-labs/sunbeam) extension for identifying, assigning, and annotating viruses and plasmids in assemblies. This pipeline uses geNomad to achieve this with additional custom filtering steps that can be ignored if not needed.
 
 ## Installation
 
@@ -27,11 +27,11 @@ Installation instructions for older versions of Sunbeam are included at the end 
 
 To run an extension, simply run Sunbeam as usual with your extension's target rule specified:
 
-    sunbeam run --profile /path/to/project/ example_rule
+    sunbeam run --profile /path/to/project/ all_genomad
 
 ### Options for config.yml
 
-  - example_rule_options: Example rule options description
+  - genomad_db: Path to where genomad should install/pull its database from (directory not a filename)
     
 ## Installing an extension (legacy instructions for sunbeam <3.0)
 
