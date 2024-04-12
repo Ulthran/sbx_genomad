@@ -31,8 +31,8 @@ rule all_genomad:
             VIRUS_FP
             / "genomad"
             / "{sample}"
-            / "assembly_summary"
-            / "assembly_virus_summary.tsv",
+            / "final.contigs_summary"
+            / "final.contigs_virus_summary.tsv",
             sample=Samples.keys(),
         ),
 
@@ -40,7 +40,7 @@ rule all_genomad:
 rule genomad_download_db:
     """Download Genomad database"""
     output:
-        dir(Cfg["sbx_genomad"]["genomad_db"]),
+        version=Path(Cfg["sbx_genomad"]["genomad_db"]) / "genomad_db" / "version.txt",
     log:
         LOG_FP / "genomad_download_db.log",
     benchmark:
@@ -48,7 +48,7 @@ rule genomad_download_db:
     conda:
         "envs/sbx_genomad_env.yml"
     container:
-        f"docker://antoniopcamargo/genomad"
+        f"docker://sunbeamlabs/sbx_genomad:{SBX_GENOMAD_VERSION}"
     shell:
         "genomad download-database {output} 2>&1 | tee {log}"
 
@@ -57,28 +57,28 @@ rule genomad_end_to_end:
     """Run Genomad end-to-end pipeline"""
     input:
         contigs=ASSEMBLY_FP / "megahit" / "{sample}_asm" / "final.contigs.fa",
-        db=Cfg["sbx_genomad"]["genomad_db"],
+        db_version=Path(Cfg["sbx_genomad"]["genomad_db"]) / "genomad_db" / "version.txt",
     output:
         assembly_summary=VIRUS_FP
         / "genomad"
         / "{sample}"
-        / "assembly_summary"
-        / "assembly_virus_summary.tsv",
+        / "final.contigs_summary"
+        / "final.contigs_virus_summary.tsv",
         assembly_fna=VIRUS_FP
         / "genomad"
         / "{sample}"
-        / "assembly_summary"
-        / "assembly_virus.fna",
+        / "final.contigs_summary"
+        / "final.contigs_virus.fna",
         prophage_summary=VIRUS_FP
         / "genomad"
         / "{sample}"
-        / "assembly_find_proviruses"
-        / "assembly_provirus.tsv",
+        / "final.contigs_find_proviruses"
+        / "final.contigs_provirus.tsv",
         prophage_fna=VIRUS_FP
         / "genomad"
         / "{sample}"
-        / "assembly_find_proviruses"
-        / "assembly_provirus.fna",
+        / "final.contigs_find_proviruses"
+        / "final.contigs_provirus.fna",
     log:
         LOG_FP / "genomad_end_to_end_{sample}.log",
     benchmark:
@@ -86,23 +86,32 @@ rule genomad_end_to_end:
     conda:
         "envs/sbx_genomad_env.yml"
     container:
-        f"docker://antoniopcamargo/genomad"
+        f"docker://sunbeamlabs/sbx_genomad:{SBX_GENOMAD_VERSION}"
     shell:
         """
         ASSEMBLY_SUMMARY_DIR=$(dirname {output.assembly_summary})
-        genomad end-to-end --cleanup --splits 8 {input.contigs} $(dirname "$ASSEMBLY_SUMMARY_DIR") {input.db} 2>&1 | tee {log}
+        DB_DIR=$(dirname {input.db_version})
+        
+        if [ ! -s {input.contigs} ]; then
+            touch {output.assembly_summary}
+            touch {output.assembly_fna}
+            touch {output.prophage_summary}
+            touch {output.prophage_fna}
+        else
+            genomad end-to-end --cleanup --splits 8 {input.contigs} $(dirname "$ASSEMBLY_SUMMARY_DIR") $DB_DIR 2>&1 | tee {log}
+        fi
         """
 
 
 rule genomad_map_to_prophage:
     """Map reads to prophage regions"""
     input:
-        reads=expand(QC_FP / "decontam" / "{sample}_{rp}.fastq.gz", rp=Pairs),
+        reads=expand(QC_FP / "decontam" / "{{sample}}_{rp}.fastq.gz", rp=Pairs),
         prophage_fna=VIRUS_FP
         / "genomad"
         / "{sample}"
-        / "assembly_find_proviruses"
-        / "assembly_provirus.fna",
+        / "final.contigs_find_proviruses"
+        / "final.contigs_provirus.fna",
     output:
         VIRUS_FP / "genomad" / "{sample}_prophage.mpileup",
     log:
