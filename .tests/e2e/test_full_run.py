@@ -14,8 +14,8 @@ def setup(tmpdir):
     genomad_db_fp = tmpdir / "genomad_db/"
 
     for dir in [x[0] for x in os.walk(assemblies_fp)][1:]:
-        with gzip.open(reads_fp / f"{dir.name}_1.fastq.gz", "w") as r1, gzip.open(
-            reads_fp / f"{dir.name}_2.fastq.gz", "w"
+        with gzip.open(reads_fp / f"{Path(dir).name}_1.fastq.gz", "w") as r1, gzip.open(
+            reads_fp / f"{Path(dir).name}_2.fastq.gz", "w"
         ) as r2:
             r1.write("NONEMPTY")
             r2.write("NONEMPTY")
