@@ -32,6 +32,7 @@ def setup(tmpdir):
     os.makedirs(megahit_assemblies_fp, exist_ok=True)
 
     for dir in [x[0] for x in os.walk(assemblies_fp)][1:]:
+        os.makedirs(megahit_assemblies_fp / f"{Path(dir).name}_asm", exist_ok=True)
         shutil.copyfile(
             Path(dir) / "assembly.fa",
             megahit_assemblies_fp / f"{Path(dir).name}_asm" / "final.contigs.fa",
