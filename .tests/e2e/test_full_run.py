@@ -34,7 +34,7 @@ def setup(tmpdir):
     for dir in [x[0] for x in os.walk(assemblies_fp)][1:]:
         shutil.copyfile(
             Path(dir) / "assembly.fa",
-            megahit_assemblies_fp / f"{dir.name}_asm" / "final.contigs.fa",
+            megahit_assemblies_fp / f"{Path(dir).name}_asm" / "final.contigs.fa",
         )
 
     config_str = f"sbx_genomad: {{genomad_db: {genomad_db_fp}}}"
