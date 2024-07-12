@@ -113,10 +113,12 @@ def test_full_run(run_sunbeam):
     for root, dirs, filenames in os.walk(output_fp / "virus" / "genomad"):
         for dir in dirs:
             summary = (
-                Path(dir) / "final.contigs_summary" / "final.contigs_virus_summary.tsv"
+                Path(dir).resolve()
+                / "final.contigs_summary"
+                / "final.contigs_virus_summary.tsv"
             )
             assert summary.exists(), f"{summary} does not exist"
 
-            cov = Path(dir) / "prophage.mpileup"
+            cov = Path(dir).resolve() / "prophage.mpileup"
             assert cov.exists(), f"{cov} does not exist"
         break
