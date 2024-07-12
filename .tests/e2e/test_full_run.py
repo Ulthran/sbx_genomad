@@ -52,6 +52,23 @@ def setup(tmpdir):
         ]
     )
 
+    dummy_ref_fp = Path(
+        ".tests/data/set5_gut_virome_dataset/dummy_ref/Bfragilis.fasta"
+    ).resolve()
+    config_str = f"sbx_genomad: {{ref_fp: {dummy_ref_fp}}}"
+
+    sp.check_output(
+        [
+            "sunbeam",
+            "config",
+            "modify",
+            "-i",
+            "-s",
+            f"{config_str}",
+            f"{config_fp}",
+        ]
+    )
+
     yield tmpdir, project_dir
 
 
@@ -99,4 +116,7 @@ def test_full_run(run_sunbeam):
                 Path(dir) / "final.contigs_summary" / "final.contigs_virus_summary.tsv"
             )
             assert summary.exists(), f"{summary} does not exist"
+
+            cov = Path(dir) / "prophage.mpileup"
+            assert cov.exists(), f"{cov} does not exist"
         break

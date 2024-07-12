@@ -10,6 +10,7 @@ def get_genomad_path() -> Path:
 SBX_GENOMAD_VERSION = open(get_genomad_path() / "VERSION").read().strip()
 
 VIRUS_FP = Cfg["all"]["output_fp"] / "virus"
+GENOMAD_FP = VIRUS_FP / "genomad"
 
 try:
     BENCHMARK_FP
@@ -28,13 +29,13 @@ localrules:
 rule all_genomad:
     input:
         expand(
-            VIRUS_FP
-            / "genomad"
+            GENOMAD_FP
             / "{sample}"
             / "final.contigs_summary"
             / "final.contigs_virus_summary.tsv",
             sample=Samples.keys(),
         ),
+        expand(GENOMAD_FP / "{sample}" / "prophage.mpileup", sample=Samples.keys()),
 
 
 rule genomad_download_db:
@@ -62,23 +63,19 @@ rule genomad_end_to_end:
         contigs=ASSEMBLY_FP / "megahit" / "{sample}_asm" / "final.contigs.fa",
         db_version=Path(Cfg["sbx_genomad"]["genomad_db"]) / "genomad_db" / "version.txt",
     output:
-        assembly_summary=VIRUS_FP
-        / "genomad"
+        assembly_summary=GENOMAD_FP
         / "{sample}"
         / "final.contigs_summary"
         / "final.contigs_virus_summary.tsv",
-        assembly_fna=VIRUS_FP
-        / "genomad"
+        assembly_fna=GENOMAD_FP
         / "{sample}"
         / "final.contigs_summary"
         / "final.contigs_virus.fna",
-        prophage_summary=VIRUS_FP
-        / "genomad"
+        prophage_summary=GENOMAD_FP
         / "{sample}"
         / "final.contigs_find_proviruses"
         / "final.contigs_provirus.tsv",
-        prophage_fna=VIRUS_FP
-        / "genomad"
+        prophage_fna=GENOMAD_FP
         / "{sample}"
         / "final.contigs_find_proviruses"
         / "final.contigs_provirus.fna",
@@ -106,22 +103,70 @@ rule genomad_end_to_end:
         """
 
 
+rule genomad_build_index:
+    input:
+        Cfg["sbx_genomad"]["ref_fp"],
+    output:
+        [
+            str(Cfg["sbx_genomad"]["ref_fp"]) + ext
+            for ext in [
+                ".1.bt2",
+                ".2.bt2",
+                ".3.bt2",
+                ".4.bt2",
+                ".rev.1.bt2",
+                ".rev.2.bt2",
+            ]
+        ],
+    log:
+        LOG_FP / "genomad_build_index.log",
+    benchmark:
+        BENCHMARK_FP / "genomad_build_index.tsv"
+    conda:
+        "envs/mapping_env.yml"
+    shell:
+        """
+        bowtie2-build {input} {input} 2>&1 | tee {log}
+        """
+
+
 rule genomad_map_to_prophage:
     """Map reads to prophage regions"""
     input:
-        reads=expand(QC_FP / "decontam" / "{{sample}}_{rp}.fastq.gz", rp=Pairs),
-        prophage_fna=VIRUS_FP
-        / "genomad"
+        prophage_fna=GENOMAD_FP
         / "{sample}"
         / "final.contigs_find_proviruses"
         / "final.contigs_provirus.fna",
+        index=Cfg["sbx_genomad"]["ref_fp"],
+        indexes=[
+            str(Cfg["sbx_genomad"]["ref_fp"]) + ext
+            for ext in [
+                ".1.bt2",
+                ".2.bt2",
+                ".3.bt2",
+                ".4.bt2",
+                ".rev.1.bt2",
+                ".rev.2.bt2",
+            ]
+        ],
     output:
-        VIRUS_FP / "genomad" / "{sample}_prophage.mpileup",
+        sam=temp(GENOMAD_FP / "{sample}" / "prophage.sam"),
+        bam=temp(GENOMAD_FP / "{sample}" / "prophage.bam"),
+        mpileup=GENOMAD_FP / "{sample}" / "prophage.mpileup",
     log:
         LOG_FP / "genomad_filter_for_prophage_{sample}.log",
     benchmark:
         BENCHMARK_FP / "genomad_filter_for_prophage_{sample}.tsv"
+    conda:
+        "envs/mapping_env.yml"
     shell:
         """
-        bwa map 
+        if [ ! -s {input.prophage_fna} ]; then
+            touch {output}
+        else
+            bowtie2 -p 8 -x {input.index} -f {input.prophage_fna} -S {output.sam}
+            samtools view -S -b {output.sam} | samtools sort -o {output.bam}
+            samtools index {output.bam}
+            samtools mpileup -A -a -Q 0 -o {output.mpileup} -f {input.index} {output.bam}
+        fi
         """

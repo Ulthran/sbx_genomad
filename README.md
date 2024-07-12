@@ -32,6 +32,7 @@ To run an extension, simply run Sunbeam as usual with your extension's target ru
 ### Options for config.yml
 
   - genomad_db: Path to where genomad should install/pull its database from (directory not a filename)
+  - ref_fp: Path to the bacterial reference genome to map proviral contigs against
     
 ## Installing an extension (legacy instructions for sunbeam <3.0)
 
