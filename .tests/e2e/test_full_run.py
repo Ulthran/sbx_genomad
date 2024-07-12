@@ -12,7 +12,8 @@ def setup(tmpdir):
     reads_fp = tmpdir / "reads/"
     os.makedirs(reads_fp, exist_ok=True)
     assemblies_fp = Path(".tests/data/set5_gut_virome_dataset/assemblies/").resolve()
-    genomad_db_fp = tmpdir / "genomad_db/"
+    # genomad_db_fp = tmpdir / "genomad_db/"
+    genomad_db_fp = Path("/home/ctbus/Penn/dbs/genomad_db_2024_04_09")
 
     for dir in [x[0] for x in os.walk(assemblies_fp)][1:]:
         with gzip.open(
@@ -92,8 +93,11 @@ def run_sunbeam(setup):
 def test_full_run(run_sunbeam):
     output_fp, benchmarks_fp = run_sunbeam
 
-    for dir in [x[0] for x in os.walk(output_fp / "virus" / "genomad")][1:]:
-        summary = (
-            Path(dir) / "final.contigs_summary" / "final.contigs_virus_summary.tsv"
-        )
-        assert summary.exists(), f"{summary} does not exist"
+    print([x[0] for x in os.walk(output_fp / "virus" / "genomad")])
+    for root, dirs, filenames in os.walk(output_fp / "virus" / "genomad"):
+        for dir in dirs:
+            summary = (
+                Path(dir) / "final.contigs_summary" / "final.contigs_virus_summary.tsv"
+            )
+            assert summary.exists(), f"{summary} does not exist"
+        break

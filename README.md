@@ -9,7 +9,7 @@
 
 ## Introduction
 
-sbx_genomad is a [sunbeam](https://github.com/sunbeam-labs/sunbeam) extension for identifying, assigning, and annotating viruses and plasmids in assemblies. This pipeline uses geNomad to achieve this with additional custom filtering steps that can be ignored if not needed.
+sbx_genomad is a [sunbeam](https://github.com/sunbeam-labs/sunbeam) extension for identifying, assigning, and annotating viruses and plasmids in assemblies. This pipeline uses [geNomad](https://gnomad.broadinstitute.org/) to achieve this with additional custom filtering steps that can be ignored if not needed.
 
 ## Installation
 
