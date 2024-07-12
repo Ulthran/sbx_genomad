@@ -124,6 +124,8 @@ rule genomad_build_index:
         BENCHMARK_FP / "genomad_build_index.tsv"
     conda:
         "envs/mapping_env.yml"
+    container:
+        f"docker://sunbeamlabs/sbx_genomad_mapping:{SBX_GENOMAD_VERSION}"
     shell:
         """
         bowtie2-build {input} {input} 2>&1 | tee {log}
@@ -159,6 +161,8 @@ rule genomad_map_to_prophage:
         BENCHMARK_FP / "genomad_filter_for_prophage_{sample}.tsv"
     conda:
         "envs/mapping_env.yml"
+    container:
+        f"docker://sunbeamlabs/sbx_genomad_mapping:{SBX_GENOMAD_VERSION}"
     shell:
         """
         if [ ! -s {input.prophage_fna} ]; then

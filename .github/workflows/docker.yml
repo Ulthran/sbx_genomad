@@ -24,13 +24,28 @@ jobs:
               id: meta
               uses: docker/metadata-action@v5
               with:
-                images: sunbeamlabs/sbx_template
+                images: sunbeamlabs/sbx_genomad
             
             - name: Build and push Docker image
               uses: docker/build-push-action@v5
               with:
                 context: .
-                file: envs/sbx_template_env.Dockerfile
+                file: envs/sbx_genomad_env.Dockerfile
                 push: true
                 tags: ${{ steps.meta.outputs.tags }}
                 labels: ${{ steps.meta.outputs.labels }}
+
+            - name: Extract metadata (tags, labels) for Docker
+              id: meta_mapping
+              uses: docker/metadata-action@v5
+              with:
+                images: sunbeamlabs/sbx_genomad_mapping
+            
+            - name: Build and push Docker image
+              uses: docker/build-push-action@v5
+              with:
+                context: .
+                file: envs/mapping_env.Dockerfile
+                push: true
+                tags: ${{ steps.meta_mapping.outputs.tags }}
+                labels: ${{ steps.meta_mapping.outputs.labels }}
